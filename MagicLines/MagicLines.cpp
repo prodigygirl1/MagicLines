@@ -46,6 +46,7 @@ BOOL is_selected = false;
 int random_num(int n1, int n2) {
     return rand() % n2 + n1;
 }
+
 // void shuffle_values(point_t *coords) -- на вход дается указатель на первый элемент массива
 // Перемешивает ячейки массива
 void shuffle_values(point_t *coords, int size) {
@@ -62,11 +63,13 @@ void shuffle_values(point_t *coords, int size) {
     }
     
 }
+
 // Функция void add_balls(int number_balls)
 // Добавление новых шариков на поле в рандомные места
-void add_balls(int number_balls) {
+void add_balls(int number_balls, struct point_t *new_balls) {
     struct point_t coords[MAX_SIZE * MAX_SIZE];
     int start_n = 0;
+    // поиск свободных ячеек
     for (int i = 0; i < MAX_SIZE; i++) {
         for (int j = 0; j < MAX_SIZE; j++) {
             if (board[i][j] == 0) {
@@ -77,11 +80,16 @@ void add_balls(int number_balls) {
         }
     }
     shuffle_values(&coords[0], start_n);
+    // заполнение шариками
     for (int i = 0; i < number_balls; i++) {
         int color = random_num(0, COLORS_NUM);
         board[coords[i].x][coords[i].y] = color+1;
+        if (new_balls) {
+            new_balls[i] = coords[i];
+        }
     }
 }
+
 // Функция init_board(int number_balls)
 // Заполняет поле начальными значениями
 void init_board(int number_balls) {
@@ -123,8 +131,9 @@ void init_board(int number_balls) {
    //     board[coords[i].x][coords[i].y] = color + 1;
    //     i++;
    // } 
-   add_balls(number_balls);
+   add_balls(number_balls, NULL);
 }
+
 // Функция board_paint(HDC hdc, int square_size)
 // Рисует поле и шарики на нем
 void board_paint(HDC hdc, int square_size)
@@ -143,6 +152,7 @@ void board_paint(HDC hdc, int square_size)
         }
         x = x + square_size;
     }
+
     // отрисовка шариков
     int i = 0, j;
     int delta_zise = 5;
@@ -152,16 +162,17 @@ void board_paint(HDC hdc, int square_size)
             if (board[i][j] > 0) {
                 RECT square = { i * square_size + x0 + delta_zise, j * square_size + y0 + delta_zise, i * square_size + square_size + x0 - delta_zise, j * square_size + square_size + y0 - delta_zise};
                 hBrush = CreateSolidBrush(colors[board[i][j] - 1]);
-                SelectObject(hdc, hBrush);
+                HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
                 Ellipse(hdc, square.left, square.top, square.right, square.bottom);
-                
+                SelectObject(hdc, hOldBrush);
+                DeleteObject(hBrush);
             }
             j++;
         }
         i++;
     }
     SelectObject(hdc, GetStockObject(NULL_BRUSH));
-    hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
+    hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0)); // ДОБАВИТЬ УДАЛЕНИЕ ОБЪЕКТА ПО АНАЛОГИИ !!!
     SelectObject(hdc, hPen);
     RECT square = { selected_cell.x * square_size + x0, selected_cell.y * square_size + y0, selected_cell.x * square_size + square_size + x0, selected_cell.y * square_size + square_size + y0};
     Rectangle(hdc, square.left, square.top, square.right, square.bottom);
@@ -200,6 +211,7 @@ int wave_algorithm(int x1, int y1, int x2, int y2) {
         return 0;
     }
 }
+
 // Функция void move_ball(x1, y1, x2, y2)
 // Перемещает шарик с позиции x1, y1 на позицию x2, y2
 void move_ball(int x1, int y1, int x2, int y2) {
@@ -207,6 +219,77 @@ void move_ball(int x1, int y1, int x2, int y2) {
     board[x1][y1] = 0;
 }
 
+// Функция void delete_balls(int x, int y)
+// Удаляет шарики по вертикали и горизонтали
+void delete_balls(int x, int y) {
+    if (board[x][y] == 0) {
+        return;
+    }
+    struct point_t coords_to_delete[MAX_SIZE * MAX_SIZE];
+    struct point_t temp[MAX_SIZE * MAX_SIZE];
+    int start_n = 0;
+    int number = 0;
+    int i;
+    // поиск совпадющих эелементов по горизонтали
+    // вправо
+    for (i = x + 1; (i < MAX_SIZE) && (board[i][y] == board[x][y]); i++) {
+        struct point_t p = { i, y };
+        temp[start_n] = p;
+        start_n++;            
+    }
+    // влево
+    for (i = x; (i > -1); i--) {
+        struct point_t p = { i, y };
+        if (board[i][y] != board[x][y]) break;
+        temp[start_n] = p;
+        start_n++;
+    }
+
+    if (start_n > 3) {
+        for (i = 0; i < start_n; i++) {
+            coords_to_delete[i] = temp[i];       
+        }
+        number = start_n; // увеличение итогового количества точек на удаление
+    }
+    // вниз
+    start_n = 0;
+    for (i = y + 1; (i < MAX_SIZE) && (board[x][i] == board[x][y]); i++) {
+        struct point_t p = { x, i };
+        temp[start_n] = p;
+        start_n++; 
+    }
+    // вверх
+    for (i = y; (i > -1); i--) {
+        if (board[x][i] != board[x][y]) break;
+        temp[start_n].x = x;
+        temp[start_n].y = i;
+        start_n++;
+    }
+   
+    if (start_n > 3) {
+        for (i = 0; i < start_n; i++) {
+            coords_to_delete[i + number] = temp[i];
+        }
+        number += start_n; // увеличение итогового количества точек на удаление 
+    }
+
+    // удаление найденных линий шариков (обнуление значений на поле)
+    for (i = 0; i < number; i++) {
+        board[coords_to_delete[i].x][coords_to_delete[i].y] = 0;
+    }
+}
+
+// Функция test_delete_balls()
+// Функция проверки работы функции delete_balls()
+void test_delete_balls() {
+    for (int i = 0; i < MAX_SIZE; i++) {
+        for (int j = 0; j < 3; j++) {
+            if (i == 2) {
+                board[i][j] = 2;
+            }
+        }
+    }
+}
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -220,7 +303,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     srand(time(0));
     // Создание поля
     init_board(BALLS_FIRST);
-
+    //test_delete_balls(); // тестовое заполнение поля!!!
     // Инициализация глобальных строк
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_MAGICLINES, szWindowClass, MAX_LOADSTRING);
@@ -393,7 +476,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     move_ball(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y); // перемещение шарика
                     is_selected = false; // исходная ячейка не выбрана
                     saved_cell = { 0, 0 }; // новая ячейка не выбрана
-                    add_balls(BALLS_FIRST);
+                    struct point_t coords_new_balls[BALLS_FIRST];
+                    add_balls(BALLS_FIRST, &coords_new_balls[0]);
+                    for (int i = 0; i < BALLS_FIRST; i++) {
+                        delete_balls(coords_new_balls[i].x, coords_new_balls[i].y);
+                    }
+                    delete_balls(selected_cell.x, selected_cell.y);
                 }
             }
             InvalidateRect(hWnd, NULL, TRUE);
