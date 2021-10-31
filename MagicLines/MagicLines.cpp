@@ -36,15 +36,52 @@ int board[MAX_SIZE][MAX_SIZE];
 COLORREF colors[COLORS_NUM] = { RGB(255, 0, 0), RGB(0, 255, 0), RGB(0, 0, 255), RGB(127, 47, 0), RGB(34, 78, 99) }; // !!! Добавить красивые цвета
 // Выбранная ячейка
 point_t selected_cell = {0, 0};
+// Сохраненная ячейка
+point_t saved_cell = {0, 0};
 // Флаг выбора ячейки
-BOOL is_chosen = false;
+BOOL is_selected = false;
 
 // Функция random_num(int n1, int n2)
 // Возвращает случайное число в заданнном диапазоне (от n1 до n2)
 int random_num(int n1, int n2) {
     return rand() % n2 + n1;
 }
-
+// void shuffle_values(point_t *coords) -- на вход дается указатель на первый элемент массива
+// Перемешивает ячейки массива
+void shuffle_values(point_t *coords, int size) {
+    int i = 0;
+    struct point_t point1, point2;
+    int ind1, ind2;
+    while (i < size) {
+        ind1 = random_num(0, size);
+        ind2 = random_num(0, size);
+        struct point_t prev_val = coords[ind1];
+        coords[ind1] = coords[ind2];
+        coords[ind2] = prev_val;
+        i++;
+    }
+    
+}
+// Функция void add_balls(int number_balls)
+// Добавление новых шариков на поле в рандомные места
+void add_balls(int number_balls) {
+    struct point_t coords[MAX_SIZE * MAX_SIZE];
+    int start_n = 0;
+    for (int i = 0; i < MAX_SIZE; i++) {
+        for (int j = 0; j < MAX_SIZE; j++) {
+            if (board[i][j] == 0) {
+                coords[start_n].x = i;
+                coords[start_n].y = j;
+                start_n++;
+            }
+        }
+    }
+    shuffle_values(&coords[0], start_n);
+    for (int i = 0; i < number_balls; i++) {
+        int color = random_num(0, COLORS_NUM);
+        board[coords[i].x][coords[i].y] = color+1;
+    }
+}
 // Функция init_board(int number_balls)
 // Заполняет поле начальными значениями
 void init_board(int number_balls) {
@@ -62,29 +99,31 @@ void init_board(int number_balls) {
         }
         i++;
     }
-    // заполнение массива coords координатами всех ячеек
-    while (start_n < MAX_SIZE * MAX_SIZE) {
-        coords[start_n].x = start_n / MAX_SIZE;
-        coords[start_n].y = start_n % MAX_SIZE;
-        start_n++;
-    }
-    // перемешивание значений массива coords
-    i = 0;
-    struct point_t point1, point2;
-    while (i < MAX_SIZE * MAX_SIZE) {
-        point1 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
-        point2 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
-        coords[point1.x * MAX_SIZE + point1.y] = point2;
-        coords[point2.x * MAX_SIZE + point2.y] = point1;
-        i++;
-    }
-   // размещение первых шаров
-    i = 0;
-    while (i < BALLS_FIRST) {
-        int color = random_num(0, COLORS_NUM);
-        board[coords[i].x][coords[i].y] = color + 1;
-        i++;
-    } 
+   // // заполнение массива coords координатами всех ячеек
+   // while (start_n < MAX_SIZE * MAX_SIZE) {
+   //     coords[start_n].x = start_n / MAX_SIZE;
+   //     coords[start_n].y = start_n % MAX_SIZE;
+   //     start_n++;
+   // }
+   // // перемешивание значений массива coords
+   // /*i = 0;
+   // struct point_t point1, point2;
+   // while (i < MAX_SIZE * MAX_SIZE) {
+   //     point1 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
+   //     point2 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
+   //     coords[point1.x * MAX_SIZE + point1.y] = point2;
+   //     coords[point2.x * MAX_SIZE + point2.y] = point1;
+   //     i++;
+   // }*/
+   // shuffle_values(&coords[0], MAX_SIZE*MAX_SIZE); // поместила в функцию код выше
+   //// размещение первых шаров
+   // i = 0;
+   // while (i < BALLS_FIRST) {
+   //     int color = random_num(0, COLORS_NUM);
+   //     board[coords[i].x][coords[i].y] = color + 1;
+   //     i++;
+   // } 
+   add_balls(number_balls);
 }
 // Функция board_paint(HDC hdc, int square_size)
 // Рисует поле и шарики на нем
@@ -127,7 +166,47 @@ void board_paint(HDC hdc, int square_size)
     RECT square = { selected_cell.x * square_size + x0, selected_cell.y * square_size + y0, selected_cell.x * square_size + square_size + x0, selected_cell.y * square_size + square_size + y0};
     Rectangle(hdc, square.left, square.top, square.right, square.bottom);
 }
-// 
+
+// Функция bool check_path(x1, y1, x2, y2) !!!! доделать
+// Проверяет, есть ли путь из точки (x1, y1) до точки (x2, y2). Использует "волновой" алгоритм
+bool check_path(int x1, int y1, int x2, int y2) {
+    int dublikat[MAX_SIZE][MAX_SIZE];
+    int i = 0, j = 0;
+    // создание поля с пустыми ячейками(0) и препятствиями(65535)
+    while (i < MAX_SIZE) {
+        while (j < MAX_SIZE) {
+            if (board[i][j] == 0) {
+                dublikat[i][j] = 0;
+            }
+            else {
+                dublikat[i][j] = 65535;
+            }
+            j++;
+        }
+        i++;
+    }
+    // заполнение поля-дубликата шагами в пути
+    //while
+    return true;
+}
+
+// int wave_alorithm(x1, y1, x2, y2)
+// Функция волнового алгоритма --- Поискать рекурсивный алгоритм !!!
+int wave_algorithm(int x1, int y1, int x2, int y2) {
+    if ((x1 == x2) & (y1 == y2)) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
+// Функция void move_ball(x1, y1, x2, y2)
+// Перемещает шарик с позиции x1, y1 на позицию x2, y2
+void move_ball(int x1, int y1, int x2, int y2) {
+    board[x2][y2] = board[x1][y1];
+    board[x1][y1] = 0;
+}
+
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
@@ -265,11 +344,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             EndPaint(hWnd, &ps);
         }
         break;
-    case WM_KEYDOWN:
+    case WM_KEYDOWN: // Закрывается при нажатии кнопки !!!
         switch (wParam)
         {
         case VK_DOWN:
-            if (selected_cell.y < MAX_SIZE) {
+            if (selected_cell.y < MAX_SIZE - 1) {
                 selected_cell.y++;
             }
             InvalidateRect(hWnd, NULL, TRUE);
@@ -287,12 +366,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             InvalidateRect(hWnd, NULL, TRUE);
             break;
         case VK_RIGHT:
-            if (selected_cell.x < MAX_SIZE) {
+            if (selected_cell.x < MAX_SIZE - 1) {
                 selected_cell.x++;
             }
             InvalidateRect(hWnd, NULL, TRUE);
             break;
+        case VK_SPACE:
+            // если ячейка с шаром еще не выбрана
+            if (is_selected == false) {
+                // если по координатам выбранной ячейки есть шарик, то сохраняем ее координаты
+                if (board[selected_cell.x][selected_cell.y] > 0) 
+                {
+                    saved_cell = { selected_cell.x, selected_cell.y };
+                    is_selected = true;
+                }
+            }
+            else {
+                // если ячейка для перемещения шара свободна, то проверяем возможность перемещения на это место шарика
+                if (board[selected_cell.x][selected_cell.y] == 0) {
+                    /*if (check_path(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y) == true) {
+                        move_ball(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y);
+                    }
+                    else {
+                        ///??? нужно занулить значение конечной ячейки?
+                    }*/
+                    move_ball(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y); // перемещение шарика
+                    is_selected = false; // исходная ячейка не выбрана
+                    saved_cell = { 0, 0 }; // новая ячейка не выбрана
+                    add_balls(BALLS_FIRST);
+                }
+            }
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+            
         }
+        break;
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
