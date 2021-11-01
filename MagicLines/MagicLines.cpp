@@ -51,7 +51,6 @@ int random_num(int n1, int n2) {
 // Перемешивает ячейки массива
 void shuffle_values(point_t *coords, int size) {
     int i = 0;
-    struct point_t point1, point2;
     int ind1, ind2;
     while (i < size) {
         ind1 = random_num(0, size);
@@ -66,7 +65,7 @@ void shuffle_values(point_t *coords, int size) {
 
 // Функция void add_balls(int number_balls)
 // Добавление новых шариков на поле в рандомные места
-void add_balls(int number_balls, struct point_t *new_balls) {
+int add_balls(int number_balls, struct point_t *new_balls) {
     struct point_t coords[MAX_SIZE * MAX_SIZE];
     int start_n = 0;
     // поиск свободных ячеек
@@ -81,13 +80,14 @@ void add_balls(int number_balls, struct point_t *new_balls) {
     }
     shuffle_values(&coords[0], start_n);
     // заполнение шариками
-    for (int i = 0; i < number_balls; i++) {
+    for (int i = 0; i < min(number_balls, start_n); i++) {
         int color = random_num(0, COLORS_NUM);
         board[coords[i].x][coords[i].y] = color+1;
         if (new_balls) {
             new_balls[i] = coords[i];
         }
     }
+    return min(number_balls, start_n);
 }
 
 // Функция init_board(int number_balls)
@@ -95,7 +95,7 @@ void add_balls(int number_balls, struct point_t *new_balls) {
 void init_board(int number_balls) {
     int i = 0;
     int j;
-    struct point_t coords[MAX_SIZE * MAX_SIZE];
+    //struct point_t coords[MAX_SIZE * MAX_SIZE];
 
     int start_n = 0;
     // заполнение массива board нулями
@@ -107,30 +107,7 @@ void init_board(int number_balls) {
         }
         i++;
     }
-   // // заполнение массива coords координатами всех ячеек
-   // while (start_n < MAX_SIZE * MAX_SIZE) {
-   //     coords[start_n].x = start_n / MAX_SIZE;
-   //     coords[start_n].y = start_n % MAX_SIZE;
-   //     start_n++;
-   // }
-   // // перемешивание значений массива coords
-   // /*i = 0;
-   // struct point_t point1, point2;
-   // while (i < MAX_SIZE * MAX_SIZE) {
-   //     point1 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
-   //     point2 = { random_num(0, MAX_SIZE), random_num(0, MAX_SIZE) };
-   //     coords[point1.x * MAX_SIZE + point1.y] = point2;
-   //     coords[point2.x * MAX_SIZE + point2.y] = point1;
-   //     i++;
-   // }*/
-   // shuffle_values(&coords[0], MAX_SIZE*MAX_SIZE); // поместила в функцию код выше
-   //// размещение первых шаров
-   // i = 0;
-   // while (i < BALLS_FIRST) {
-   //     int color = random_num(0, COLORS_NUM);
-   //     board[coords[i].x][coords[i].y] = color + 1;
-   //     i++;
-   // } 
+   
    add_balls(number_balls, NULL);
 }
 
@@ -172,10 +149,23 @@ void board_paint(HDC hdc, int square_size)
         i++;
     }
     SelectObject(hdc, GetStockObject(NULL_BRUSH));
-    hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0)); // ДОБАВИТЬ УДАЛЕНИЕ ОБЪЕКТА ПО АНАЛОГИИ !!!
-    SelectObject(hdc, hPen);
+    // отрисовка ячейки, на которой курсор
+    hPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0)); 
+    HPEN hOldPen = (HPEN)SelectObject(hdc, hPen);
     RECT square = { selected_cell.x * square_size + x0, selected_cell.y * square_size + y0, selected_cell.x * square_size + square_size + x0, selected_cell.y * square_size + square_size + y0};
     Rectangle(hdc, square.left, square.top, square.right, square.bottom);
+    SelectObject(hdc, hOldPen);
+    DeleteObject(hPen);
+    // отрисовка выбранной для перемещения ячейки, если она есть
+    if (is_selected) {
+        hPen = CreatePen(PS_SOLID, 2, RGB(0, 255, 0));
+        hOldPen = (HPEN)SelectObject(hdc, hPen);
+        square = { saved_cell.x * square_size + x0, saved_cell.y * square_size + y0, saved_cell.x * square_size + square_size + x0, saved_cell.y * square_size + square_size + y0 };
+        Rectangle(hdc, square.left, square.top, square.right, square.bottom);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+    }
+    
 }
 
 // Функция bool check_path(x1, y1, x2, y2) !!!! доделать
@@ -196,21 +186,28 @@ bool check_path(int x1, int y1, int x2, int y2) {
         }
         i++;
     }
-    // заполнение поля-дубликата шагами в пути
+    // заполнение поля-дубликата шагами в пути с помощью функции wave_algorithm()
     //while
+   /* wave_algorithm(x1, y1, x2, y2, &dublikat[0]);*/
     return true;
 }
 
-// int wave_alorithm(x1, y1, x2, y2)
-// Функция волнового алгоритма --- Поискать рекурсивный алгоритм !!!
-int wave_algorithm(int x1, int y1, int x2, int y2) {
-    if ((x1 == x2) & (y1 == y2)) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
-}
+// int wave_alorithm(int x1, int y1, int x2, int y2)
+// x1, x2 - текущая точка
+// x2,y2 - конечная точка
+// Функция волнового алгоритма --- Поискать рекурсивный алгоритм !!! Как передавать указатель на двумерный массив ???
+//int wave_algorithm(int x1, int y1, int x2, int y2, ) {
+//    if ((x1 == x2) & (y1 == y2)) {
+//        return 1;
+//    }
+//    else {
+//        if (( 0 <= x1 < MAX_SIZE) && (0 <= y1 < MAX_SIZE) && (board[x1][y1] == 0)) {
+//            board[x1][y1] += 1;
+//        }
+//        
+//        return wave_algorithm(x1 + 1, y1, x2, y2, &board[0][0]) || wave_algorithm(x1, y1 + 1, x2, y2, &board[0]) || wave_algorithm(x1 - 1, y1, x2, y2, &board[0]) || wave_algorithm(x1, y1 - 1, x2, y2, &board[0]);
+//    }
+//}
 
 // Функция void move_ball(x1, y1, x2, y2)
 // Перемещает шарик с позиции x1, y1 на позицию x2, y2
@@ -221,9 +218,9 @@ void move_ball(int x1, int y1, int x2, int y2) {
 
 // Функция void delete_balls(int x, int y)
 // Удаляет шарики по вертикали и горизонтали
-void delete_balls(int x, int y) {
+bool delete_balls(int x, int y) {
     if (board[x][y] == 0) {
-        return;
+        return false;
     }
     struct point_t coords_to_delete[MAX_SIZE * MAX_SIZE];
     struct point_t temp[MAX_SIZE * MAX_SIZE];
@@ -274,13 +271,16 @@ void delete_balls(int x, int y) {
     }
 
     // удаление найденных линий шариков (обнуление значений на поле)
+    bool flag = false;
     for (i = 0; i < number; i++) {
         board[coords_to_delete[i].x][coords_to_delete[i].y] = 0;
+        bool flag = true;
     }
+    return flag;
 }
 
 // Функция test_delete_balls()
-// Функция проверки работы функции delete_balls()
+// Заполняет 
 void test_delete_balls() {
     for (int i = 0; i < MAX_SIZE; i++) {
         for (int j = 0; j < 3; j++) {
@@ -289,6 +289,16 @@ void test_delete_balls() {
             }
         }
     }
+}
+bool board_is_full() {
+    for (int i = 0; i < MAX_SIZE; i++) {
+        for (int j = 0; j < MAX_SIZE; j++) {
+            if (board[i][j] == 0) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
@@ -471,17 +481,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                         move_ball(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y);
                     }
                     else {
-                        ///??? нужно занулить значение конечной ячейки?
+                        
                     }*/
                     move_ball(saved_cell.x, saved_cell.y, selected_cell.x, selected_cell.y); // перемещение шарика
                     is_selected = false; // исходная ячейка не выбрана
                     saved_cell = { 0, 0 }; // новая ячейка не выбрана
-                    struct point_t coords_new_balls[BALLS_FIRST];
-                    add_balls(BALLS_FIRST, &coords_new_balls[0]);
-                    for (int i = 0; i < BALLS_FIRST; i++) {
-                        delete_balls(coords_new_balls[i].x, coords_new_balls[i].y);
-                    }
-                    delete_balls(selected_cell.x, selected_cell.y);
+                    if (not delete_balls(selected_cell.x, selected_cell.y)) {
+                        struct point_t coords_new_balls[BALLS_FIRST];
+                        int number_balls = add_balls(BALLS_FIRST, &coords_new_balls[0]);
+                        for (int i = 0; i < number_balls; i++) {
+                            delete_balls(coords_new_balls[i].x, coords_new_balls[i].y);
+                        }
+                        InvalidateRect(hWnd, NULL, TRUE);
+                        // если поле заполнено, то высвечиваем сообщение об окончании игры с предложением начать новую
+                        if (board_is_full()) {
+                            TCHAR text_message[35] = L"Игра закончена.Хотите продолжить?";
+                            TCHAR name_box[15] = L"Окончание игры";
+                            if (MessageBox(hWnd, text_message, name_box, MB_OKCANCEL) == IDOK) {
+                                init_board(BALLS_FIRST);
+                            }
+                        }
+                    }                              
+                }
+                else { // если несвободна, то происходит перевыбор ячейки перемещения
+                    saved_cell = { selected_cell.x, selected_cell.y };                    
                 }
             }
             InvalidateRect(hWnd, NULL, TRUE);
