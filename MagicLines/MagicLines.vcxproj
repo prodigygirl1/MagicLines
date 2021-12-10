@@ -140,12 +140,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Game.h" />
     <ClInclude Include="MagicLines.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="TableRecords.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Game.cpp" />
     <ClCompile Include="MagicLines.cpp" />
+    <ClCompile Include="TableRecords.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="MagicLines.rc" />
@@ -153,6 +157,10 @@
   <ItemGroup>
     <Image Include="MagicLines.ico" />
     <Image Include="small.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="level.txt" />
+    <Text Include="records.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
