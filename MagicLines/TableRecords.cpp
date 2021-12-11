@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include "framework.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 
 #define MAX_NUM_RECORD 10
@@ -27,6 +28,8 @@ struct Record records[MAX_NUM_RECORDS + 1];
 // текущее количество рекордов в таблице
 int numRecords = 0;
 
+char filenameRecords[] = "records.txt";
+
 // функция шифрования 
 char* encode_str(char s[]) {
     for (int i = 0; s[i] != '\0'; i++) {
@@ -43,12 +46,74 @@ char* decode_str(char s[]) {
     return s;
 }
 
-int record_is_filled(int i) {
-    if (records[i].day && records[i].month && records[i].year &&
-        records[i].hour && records[i].minute && records[i].second &&
-        records[i].name && records[i].points)
-        return 1;
-    return 0;
+bool record_is_filled(int i) {
+    return ( records[i].name );
+}
+
+void SaveRecords() {
+    // Запись в выходной файл
+    FILE* fout = fopen(filenameRecords, "wt");
+    if (fout == NULL) {
+        // выходим, не сохранив результаты в файл
+        return;
+    }
+
+    fprintf(fout, "%d\n", numRecords);
+
+    int i;
+    for (i = 0; i < numRecords; i++) {
+        char s[8][20];
+        if (record_is_filled(i)) {
+            // сохраняем в файле каждое поле каждого рекорда
+            strcpy(s[0], records[i].name);
+            fprintf(fout, "%s %s %s %s %s %s %s %s\n",
+                encode_str(s[0]),             
+                encode_str(_itoa(records[i].points, s[1], 10)),
+                encode_str(_itoa(records[i].year, s[2], 10)),
+                encode_str(_itoa(records[i].month, s[3], 10)),
+                encode_str(_itoa(records[i].day, s[4], 10)),
+                encode_str(_itoa(records[i].hour, s[5], 10)),
+                encode_str(_itoa(records[i].minute, s[6], 10)),
+                encode_str(_itoa(records[i].second, s[7], 10))
+            );
+        }
+        ;
+    }
+    // закрываем файл
+    fclose(fout);
+}
+
+void LoadRecords() {
+    // Открываем файл с рекордами на чтение
+    FILE* fout = fopen(filenameRecords, "rt");
+    if (fout == NULL) {
+        // выходим, не загрузив рекорды из файла
+        return;
+    }
+
+    fscanf(fout, "%d", &numRecords); // количество рекордов в таблице
+
+    char s[20];
+    int i, j, in[7];
+    for (i = 0; i < numRecords; i++) {
+        // загружаем из файла каждое поле каждого рекорда
+        fscanf(fout, "%s", s);
+        strcpy(records[i].name, decode_str(s));
+        for (j = 0; j < 7; j++) {
+            fscanf(fout, "%s", s);
+            in[j] = atoi(decode_str(s));
+        }
+        records[i].points = in[0];
+        records[i].year = in[1];
+        records[i].month = in[2];
+        records[i].day = in[3];
+        records[i].hour = in[4];
+        records[i].minute = in[5];
+        records[i].second = in[6];
+    }
+
+    // закрываем файл
+    fclose(fout);
 }
 
 void DrawRecords(HDC hdc) {
@@ -84,11 +149,13 @@ void DrawRecords(HDC hdc) {
             TextOut(hdc, 60, 24 * (i + 1) + 80, (LPCWSTR)string2, _tcslen(string2));
         }
     }
-    MoveToEx(hdc, 50, 70, NULL);
-    LineTo(hdc, 550, 70);
-    LineTo(hdc, 550, numRecords * 30);
-    LineTo(hdc, 50, numRecords * 30);
-    LineTo(hdc, 50, 70);
+    /*if (numRecords) {
+        MoveToEx(hdc, 50, 70, NULL);
+        LineTo(hdc, 550, 70);
+        LineTo(hdc, 550, numRecords * 30 + 170);
+        LineTo(hdc, 50, numRecords * 30 + 170);
+        LineTo(hdc, 50, 70);
+    }*/
     DeleteObject(hFont);
 }
 
@@ -138,6 +205,7 @@ void InsertRecord(char name[])
     if (numRecords < MAX_NUM_RECORDS)
         // следующий раз новый рекорд будет занесен в новый элемент
         numRecords++;
+    SaveRecords();
 }
 
 void addRecord(char name[])
@@ -166,70 +234,8 @@ void addRecord(char name[])
     numRecords++;
 }
 
-char filenameRecords[] = "records.txt";
 
-void SaveRecords() {
-    // Запись в выходной файл
-    FILE* fout = fopen(filenameRecords, "wt");
-    if (fout == NULL) {
-        // выходим, не сохранив результаты в файл
-        return;
-    }
 
-    fprintf(fout, "%d\n", numRecords);
 
-    int i;
-    for (i = 0; i < numRecords; i++) {
-        // сохраняем в файле каждое поле каждого рекорда
-        fprintf(fout, "%s %d %d %d %d %d %d %d\n",
-            encode_str(records[i].name),
-            records[i].points,
-            records[i].year,
-            records[i].month,
-            records[i].day,
-            records[i].hour,
-            records[i].minute,
-            records[i].second
-        );
-    }
-    // закрываем файл
-    fclose(fout);
-}
 
-void LoadRecords() {
-    // Открываем файл с рекордами на чтение
-    FILE* fout = fopen(filenameRecords, "rt");
-    if (fout == NULL) {
-        // выходим, не загрузив рекорды из файла
-        return;
-    }
-
-    fscanf(fout, "%d", &numRecords); // количество рекордов в таблице
-
-    int i;
-    for (i = 0; i < numRecords; i++) {
-        // загружаем из файла каждое поле каждого рекорда
-        fscanf(fout, "%s%d%d%d%d%d%d%d\n",
-            records[i].name,
-            &records[i].points,
-            &records[i].year,
-            &records[i].month,
-            &records[i].day,
-            &records[i].hour,
-            &records[i].minute,
-            &records[i].second
-        );
-        strcpy(records[i].name, decode_str(records[i].name));
-            /*& records[i].points,
-            & records[i].year,
-            & records[i].month,
-            & records[i].day,
-            & records[i].hour,
-            & records[i].minute,
-            & records[i].second*/
-    }
-    
-    // закрываем файл
-    fclose(fout);
-}
 
